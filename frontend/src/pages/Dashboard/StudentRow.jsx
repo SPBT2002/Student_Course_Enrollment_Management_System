@@ -14,7 +14,7 @@ const StudentRow = ({ student, onEdit, onDelete }) => {
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-6 py-4 text-sm text-gray-700">#{student.id}</td>
+      <td className="px-6 py-4 text-sm text-gray-700">#{student._id?.slice(-6) || 'N/A'}</td>
       <td className="px-6 py-4">
         <div className="font-semibold text-gray-900">{student.name}</div>
       </td>
@@ -36,7 +36,7 @@ const StudentRow = ({ student, onEdit, onDelete }) => {
             Edit
           </button>
           <button
-            onClick={() => onDelete(student.id)}
+            onClick={() => onDelete(student._id)}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-1 transition-colors text-sm font-medium shadow-sm"
           >
             
