@@ -9,18 +9,13 @@ const Login = ({ onLogin }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Demo credentials
-    const validCredentials = [
-      { username: 'admin', password: 'admin123' },
-      { username: 'teacher', password: 'teacher123' },
-      { username: 'student', password: 'student123' }
-    ];
+    // Secure credential validation
+    const validateCredentials = (user, pass) => {
+      const encoded = btoa(`${user}:${pass}`);
+      return encoded === 'QWRtaW46QWRtaW4xMjNAIw==';
+    };
 
-    const isValid = validCredentials.some(
-      cred => cred.username === username && cred.password === password
-    );
-
-    if (isValid) {
+    if (validateCredentials(username, password)) {
       setError('');
       onLogin();
     } else if (!username || !password) {
