@@ -58,7 +58,7 @@ const StudentForm = ({ isOpen, onClose, onSubmit, editStudent }) => {
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-6 rounded-t-2xl">
           <h2 className="text-2xl font-bold">
-            {editStudent ? '✏️ Edit Student' : '➕ Add New Student'}
+            {editStudent ? 'Edit Student' : 'Add New Student'}
           </h2>
           <p className="text-blue-100 text-sm mt-1">
             {editStudent ? 'Update student information' : 'Fill in the details to add a new student'}
