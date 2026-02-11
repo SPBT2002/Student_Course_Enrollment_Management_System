@@ -4,72 +4,49 @@ import StatsCards from '../../components/StatsCards';
 import FilterSection from '../../components/FilterSection';
 import StudentTable from './StudentTable';
 import StudentForm from './StudentForm';
+import * as api from '../../services/api';
 
 const Dashboard = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('All Courses');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editStudent, setEditStudent] = useState(null);
-  
-  // Initial student data
-  const initialStudents = [
-    {
-      id: 1,
-      name: 'Alice Johnson',
-      email: 'alice.johnson@email.com',
-      phone: '1234567890',
-      course: 'Computer Science',
-      status: 'Active',
-    },
-    {
-      id: 2,
-      name: 'Bob Smith',
-      email: 'bob.smith@email.com',
-      phone: '2345678901',
-      course: 'Mathematics',
-      status: 'Active',
-    },
-    {
-      id: 3,
-      name: 'Carol Williams',
-      email: 'carol.w@email.com',
-      phone: '3456789012',
-      course: 'Physics',
-      status: 'Complete',
-    },
-    {
-      id: 4,
-      name: 'David Brown',
-      email: 'david.brown@email.com',
-      phone: '4567890123',
-      course: 'Computer Science',
-      status: 'Complete',
-    },
-    {
-      id: 5,
-      name: 'Emma Davis',
-      email: 'emma.davis@email.com',
-      phone: '5678901234',
-      course: 'Chemistry',
-      status: 'Active',
-    },
-  ];
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Load students from localStorage or use initial data
-  const [students, setStudents] = useState(() => {
-    const savedStudents = localStorage.getItem('students')
-    return savedStudents ? JSON.parse(savedStudents) : initialStudents
-  });
-
-  // Save students to localStorage whenever they change
+  // Fetch students from API
   useEffect(() => {
-    localStorage.setItem('students', JSON.stringify(students))
-  }, [students]);
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.getStudents();
+      setStudents(data);
+    } catch (err) {
+      setError('Failed to load students. Please make sure the backend server is running.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter students based on search term and selected course
   const filteredStudents = students.filter((student) => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
+    // Trim and normalize search term
+    const searchValue = searchTerm.trim().toLowerCase();
+    
+    // Search in name and email (more flexible search)
+    const matchesSearch = searchValue === '' || 
+      (student.name && student.name.toLowerCase().includes(searchValue)) ||
+      (student.email && student.email.toLowerCase().includes(searchValue));
+    
+    // Course filter
     const matchesCourse = selectedCourse === 'All Courses' || student.course === selectedCourse;
+    
     return matchesSearch && matchesCourse;
   });
 
@@ -91,29 +68,35 @@ const Dashboard = ({ onLogout }) => {
   };
 
   // Handle delete student
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
-      setStudents(students.filter((s) => s.id !== id));
+      try {
+        await api.deleteStudent(id);
+        await fetchStudents(); // Refresh the list
+      } catch (err) {
+        alert('Failed to delete student. Please try again.');
+        console.error(err);
+      }
     }
   };
 
   // Handle form submit
-  const handleFormSubmit = (formData) => {
-    if (editStudent) {
-      // Update existing student
-      setStudents(students.map((s) =>
-        s.id === editStudent.id ? { ...s, ...formData } : s
-      ));
-    } else {
-      // Add new student
-      const newStudent = {
-        id: students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1,
-        ...formData,
-      };
-      setStudents([...students, newStudent]);
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (editStudent) {
+        // Update existing student
+        await api.updateStudent(editStudent._id, formData);
+      } else {
+        // Add new student
+        await api.createStudent(formData);
+      }
+      await fetchStudents(); // Refresh the list
+      setIsFormOpen(false);
+      setEditStudent(null);
+    } catch (err) {
+      alert(err.message || 'Failed to save student. Please try again.');
+      console.error(err);
     }
-    setIsFormOpen(false);
-    setEditStudent(null);
   };
 
   // Handle form close
@@ -127,25 +110,39 @@ const Dashboard = ({ onLogout }) => {
       <Header onLogout={onLogout} />
       {/* Add top padding to prevent content being hidden behind the fixed header */}
       <div className="pt-24 md:pt-28 lg:pt-32 pb-8 px-4 md:px-8">
-        <StatsCards 
-          totalStudents={totalStudents} 
-          activeStudents={activeStudents}
-          completeStudents={completeStudents}
-        />
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
         
-        <FilterSection
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          selectedCourse={selectedCourse}
-          setSelectedCourse={setSelectedCourse}
-          onAddStudent={handleAddStudent}
-        />
-        
-        <StudentTable
-          students={filteredStudents}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-xl text-gray-600">Loading students...</div>
+          </div>
+        ) : (
+          <>
+            <StatsCards 
+              totalStudents={totalStudents} 
+              activeStudents={activeStudents}
+              completeStudents={completeStudents}
+            />
+            
+            <FilterSection
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              selectedCourse={selectedCourse}
+              setSelectedCourse={setSelectedCourse}
+              onAddStudent={handleAddStudent}
+            />
+            
+            <StudentTable
+              students={filteredStudents}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </>
+        )}
       </div>
 
       <StudentForm
